@@ -8,21 +8,8 @@ Pillow==10.2.0
 numpy==1.24.3
 gdown==5.1.0
 protobuf==3.20.3
-h5py==3.11.0streamlit==1.31.0
-tensorflow==2.15.0
-ultralytics==8.1.20
-torch==2.1.2
-torchvision==0.16.2
-opencv-python-headless==4.9.0.80
-Pillow==10.2.0
-numpy==1.24.3
-gdown==5.1.0
-protobuf==3.20.3
 seaborn==0.13.0
 matplotlib==3.10.7
 pandas==2.3.3
 pyyaml==6.0.3
-
-# Keras compatibility fix
-tf-keras==2.15.0
 h5py==3.11.0
