@@ -1,10 +1,22 @@
-streamlit==1.32.0
-ultralytics==8.1.20
+streamlit==1.31.0
+
+# TensorFlow
+tensorflow==2.15.0
+protobuf==3.20.3
+
+# PyTorch + YOLO
 torch==2.1.2
 torchvision==0.16.2
+ultralytics==8.1.20
+
+# Image processing
 opencv-python-headless==4.9.0.80
 Pillow==10.2.0
-numpy==1.26.4
+
+# Data & utilities
+numpy==1.24.3
 pandas==2.1.4
 matplotlib==3.8.0
+seaborn==0.13.0
 PyYAML==6.0.1
+gdown==5.1.0
