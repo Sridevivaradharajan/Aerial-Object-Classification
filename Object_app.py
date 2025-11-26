@@ -325,7 +325,6 @@ st.markdown("""
 # ═══════════════════════════════════════════════════════════════
 # UTILITY FUNCTIONS
 # ═══════════════════════════════════════════════════════════════
-
 @st.cache_resource(show_spinner=False)
 def load_classification_model():
     """Load TensorFlow classification model from Google Drive"""
@@ -342,11 +341,34 @@ def load_classification_model():
                 if not success:
                     return None, None
         
-        # Load the model
-        model = tf.keras.models.load_model(model_path)
-        return model, "Transfer Learning Model"
+        # Check if file actually exists and has content
+        if not os.path.exists(model_path) or os.path.getsize(model_path) < 1000:
+            st.error(f"Model file is missing or corrupted: {model_path}")
+            return None, None
+        
+        # Load the model with custom objects and safe mode disabled
+        try:
+            # Try loading with compile=False first (safer)
+            model = tf.keras.models.load_model(model_path, compile=False)
+            
+            # Recompile the model manually
+            model.compile(
+                optimizer=tf.keras.optimizers.Adam(learning_rate=0.00004),
+                loss='binary_crossentropy',
+                metrics=['accuracy']
+            )
+            
+            return model, "InceptionV3 Transfer Learning"
+            
+        except Exception as load_error:
+            # If that fails, try with safe_mode=False (Keras 3.x)
+            import keras
+            model = keras.saving.load_model(model_path, safe_mode=False)
+            return model, "InceptionV3 Transfer Learning"
+            
     except Exception as e:
         st.error(f"Error loading classification model: {str(e)}")
+        st.error(f"Full error details: {type(e).__name__}")
         return None, None
 
 @st.cache_resource(show_spinner=False)
@@ -715,4 +737,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
