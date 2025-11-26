@@ -3,6 +3,7 @@
 AERIAL OBJECT DETECTION & CLASSIFICATION - STREAMLIT APP
 ═══════════════════════════════════════════════════════════════
 Professional app for Bird vs Drone classification and detection
+Cloud-ready version with Google Drive integration
 Color Palette: #450693, #8C00FF, #FF3F7F, #FFC400
 """
 
@@ -15,9 +16,48 @@ from ultralytics import YOLO
 import torch
 import io
 import time
+import os
+import gdown
+from pathlib import Path
 
 # ═══════════════════════════════════════════════════════════════
-# CONFIGURATION & STYLING
+# CONFIGURATION & CLOUD SETUP
+# ═══════════════════════════════════════════════════════════════
+
+# Google Drive file IDs - REPLACE THESE WITH YOUR ACTUAL FILE IDs
+GDRIVE_CONFIG = {
+    'classification_model': {
+        'file_id': '1fIBhOpDFhugYKr38cxdGD3U9fXz-aJWS',
+        'output': 'Models/Inception_model.keras'
+    },
+    'detection_model': {
+        'file_id': '1fIBhOpDFhugYKr38cxdGD3U9fXz-aJWS',
+        'output': 'Models/YOLOv8s.pt'
+    }
+}
+
+
+def download_from_gdrive(file_id, output_path):
+    """Download model from Google Drive"""
+    try:
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        
+        # Check if file already exists
+        if os.path.exists(output_path):
+            return True
+        
+        # Download from Google Drive
+        url = f'https://drive.google.com/uc?id={file_id}'
+        gdown.download(url, output_path, quiet=False)
+        
+        return os.path.exists(output_path)
+    except Exception as e:
+        st.error(f"Error downloading from Google Drive: {str(e)}")
+        return False
+
+# ═══════════════════════════════════════════════════════════════
+# PAGE CONFIGURATION
 # ═══════════════════════════════════════════════════════════════
 
 st.set_page_config(
@@ -288,38 +328,52 @@ st.markdown("""
 
 @st.cache_resource(show_spinner=False)
 def load_classification_model():
-    """Load TensorFlow classification model"""
+    """Load TensorFlow classification model from Google Drive"""
     try:
-        model = tf.keras.models.load_model(r'D:\Profession\Labmentix\Aerial Object classification\Object Classification\results\streamlit_app\best_model.keras')
-        return model, "Best Model (Transfer Learning)"
-    except:
-        try:
-            model = tf.keras.models.load_model('models/resnet50_final.keras')
-            return model, "ResNet50"
-        except:
-            try:
-                model = tf.keras.models.load_model('models/custom_cnn_final.keras')
-                return model, "Custom CNN"
-            except:
-                st.error("No classification model found! Please ensure model files are in the correct directory.")
-                return None, None
+        model_path = GDRIVE_CONFIG['classification_model']['output']
+        
+        # Download if not exists
+        if not os.path.exists(model_path):
+            with st.spinner("Downloading classification model from Google Drive..."):
+                success = download_from_gdrive(
+                    GDRIVE_CONFIG['classification_model']['file_id'],
+                    model_path
+                )
+                if not success:
+                    return None, None
+        
+        # Load the model
+        model = tf.keras.models.load_model(model_path)
+        return model, "Transfer Learning Model"
+    except Exception as e:
+        st.error(f"Error loading classification model: {str(e)}")
+        return None, None
 
 @st.cache_resource(show_spinner=False)
 def load_detection_model():
-    """Load YOLOv8 detection model"""
+    """Load YOLOv8 detection model from Google Drive"""
     try:
+        model_path = GDRIVE_CONFIG['detection_model']['output']
+        
+        # Download if not exists
+        if not os.path.exists(model_path):
+            with st.spinner("Downloading detection model from Google Drive..."):
+                success = download_from_gdrive(
+                    GDRIVE_CONFIG['detection_model']['file_id'],
+                    model_path
+                )
+                if not success:
+                    return None, None
+        
+        # Load the model
         from ultralytics.nn.tasks import DetectionModel
         torch.serialization.add_safe_globals([DetectionModel])
         
-        model = YOLO('best_bird_drone.pt')
+        model = YOLO(model_path)
         return model, "YOLOv8s"
-    except:
-        try:
-            model = YOLO(r'D:\Profession\Labmentix\Aerial Object classification\Object Detection\best_bird_drone.pt')
-            return model, "YOLOv8s"
-        except:
-            st.error("No detection model found! Please ensure YOLOv8 model file exists.")
-            return None, None
+    except Exception as e:
+        st.error(f"Error loading detection model: {str(e)}")
+        return None, None
 
 def preprocess_image_classification(image, target_size=(224, 224)):
     """Preprocess image for classification"""
@@ -482,7 +536,8 @@ def main():
                     st.session_state.classification_model_name = model_name
         
         if 'classification_model' not in st.session_state:
-            st.error("Failed to load model. Please check model files.")
+            st.error("Failed to load model. Please check your Google Drive configuration.")
+            st.info("Make sure you've set the correct Google Drive file IDs in the GDRIVE_CONFIG dictionary.")
             return
         
         st.success(f"Model loaded: **{st.session_state.classification_model_name}**")
@@ -582,7 +637,8 @@ def main():
                     st.session_state.detection_model_name = model_name
         
         if 'detection_model' not in st.session_state:
-            st.error("Failed to load model. Please check model files.")
+            st.error("Failed to load model. Please check your Google Drive configuration.")
+            st.info("Make sure you've set the correct Google Drive file IDs in the GDRIVE_CONFIG dictionary.")
             return
         
         st.success(f"Model loaded: **{st.session_state.detection_model_name}**")
