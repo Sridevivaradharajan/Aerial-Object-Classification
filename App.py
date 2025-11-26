@@ -346,87 +346,55 @@ def load_classification_model():
             st.error(f"Model file is missing or corrupted: {model_path}")
             return None, None
         
-        # STRATEGY: Try multiple loading methods in order of reliability
+        # FIXED: Simplified loading strategy with proper error handling
+        model = None
+        loading_method = None
         
-        # Method 1: Legacy TF-Keras (Most Compatible)
+        # Method 1: Standard TensorFlow Keras (works with .h5 and compatible .keras files)
         try:
-            os.environ['TF_USE_LEGACY_KERAS'] = '1'
-            with st.spinner("Loading with TF-Keras backend..."):
-                model = tf.keras.models.load_model(model_path, compile=False)
-                st.success("✅ Model loaded successfully with TF-Keras")
+            model = tf.keras.models.load_model(model_path, compile=False)
+            loading_method = "TensorFlow Keras"
+            st.success("✅ Model loaded successfully")
         except Exception as e1:
-            st.warning(f"Method 1 failed: {str(e1)[:100]}")
-            
-            # Method 2: Pure Keras 3.x with safe_mode disabled
+            # Method 2: Try with tf.saved_model if it's a SavedModel format
             try:
-                with st.spinner("Trying Keras 3.x loader..."):
-                    import keras
-                    model = keras.saving.load_model(model_path, safe_mode=False)
-                    st.success("✅ Model loaded successfully with Keras 3.x")
+                model = tf.saved_model.load(model_path)
+                # Wrap in a callable interface
+                model = model.signatures['serving_default']
+                loading_method = "TensorFlow SavedModel"
+                st.success("✅ Model loaded as SavedModel")
             except Exception as e2:
-                st.warning(f"Method 2 failed: {str(e2)[:100]}")
+                st.error("❌ Failed to load model with both methods")
+                st.error(f"Method 1 error: {str(e1)[:200]}")
+                st.error(f"Method 2 error: {str(e2)[:200]}")
                 
-                # Method 3: Custom object handling
-                try:
-                    with st.spinner("Trying with custom object scope..."):
-                        # Define custom objects if needed
-                        custom_objects = {}
-                        model = tf.keras.models.load_model(
-                            model_path, 
-                            custom_objects=custom_objects,
-                            compile=False
-                        )
-                        st.success("✅ Model loaded with custom objects")
-                except Exception as e3:
-                    st.warning(f"Method 3 failed: {str(e3)[:100]}")
-                    
-                    # Method 4: H5 format attempt
-                    try:
-                        if model_path.endswith('.keras'):
-                            h5_path = model_path.replace('.keras', '.h5')
-                            st.info(f"Trying H5 format conversion...")
-                            # This won't work for .keras files, just trying
-                        
-                        import h5py
-                        with st.spinner("Attempting H5 loader..."):
-                            model = tf.keras.models.load_model(model_path, compile=False)
-                            st.success("✅ Model loaded with H5 format")
-                    except Exception as e4:
-                        # ALL METHODS FAILED
-                        st.error("❌ All loading methods failed!")
-                        st.error(f"Last error: {str(e4)}")
-                        
-                        st.error("### 🔴 CRITICAL: Model Cannot Be Loaded")
-                        st.markdown("""
-                        **The model file is incompatible with this TensorFlow version.**
-                        
-                        **SOLUTION:** You need to re-export your model. Use this code:
-                        
-                        ```python
-                        import tensorflow as tf
-                        
-                        # Load your original model
-                        model = tf.keras.models.load_model('path/to/your/model.keras')
-                        
-                        # Save in H5 format (most compatible)
-                        model.save('Inception_model.h5')
-                        
-                        # OR save with explicit Keras format
-                        model.save('Inception_model_v2.keras', save_format='keras_v3')
-                        ```
-                        
-                        Then upload the new `.h5` file to Google Drive and update the file ID.
-                        """)
-                        return None, None
+                st.error("### 🔴 SOLUTION REQUIRED")
+                st.markdown("""
+                **Your model format is incompatible. Please re-save your model:**
+                
+                ```python
+                import tensorflow as tf
+                
+                # Load your trained model
+                model = tf.keras.models.load_model('your_model.keras')
+                
+                # Save in H5 format (most compatible)
+                model.save('best_model.h5', save_format='h5')
+                ```
+                
+                Then upload `best_model.h5` to Google Drive and update the file ID.
+                """)
+                return None, None
         
-        # Compile the successfully loaded model
-        model.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=0.00004),
-            loss='binary_crossentropy',
-            metrics=['accuracy']
-        )
+        # Compile the model if it's a Keras model
+        if hasattr(model, 'compile'):
+            model.compile(
+                optimizer=tf.keras.optimizers.Adam(learning_rate=0.00004),
+                loss='binary_crossentropy',
+                metrics=['accuracy']
+            )
         
-        return model, "InceptionV3 Transfer Learning"
+        return model, f"InceptionV3 ({loading_method})"
             
     except Exception as e:
         st.error(f"❌ Unexpected error: {str(e)}")
@@ -798,6 +766,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
