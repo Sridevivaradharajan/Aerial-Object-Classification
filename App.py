@@ -28,7 +28,7 @@ from pathlib import Path
 GDRIVE_CONFIG = {
     'classification_model': {
         'file_id': '1q9ekvv5CBQKbmjPo2q6rWBef71EIGB_8',
-        'output': 'Models/best_model.keras'
+        'output': 'Models/best_model.keras' 
     },
     'detection_model': {
         'file_id': '1K-pJncda11qY1JKi9TuOsPtqTiVBoM2Z',
@@ -327,77 +327,31 @@ st.markdown("""
 # ═══════════════════════════════════════════════════════════════
 @st.cache_resource(show_spinner=False)
 def load_classification_model():
-    """Load TensorFlow classification model from Google Drive"""
+    """Load Keras 3 classification model from Google Drive"""
     try:
         model_path = GDRIVE_CONFIG['classification_model']['output']
         
         # Download if not exists
         if not os.path.exists(model_path):
-            with st.spinner("Downloading classification model from Google Drive..."):
+            with st.spinner("Downloading classification model..."):
                 success = download_from_gdrive(
                     GDRIVE_CONFIG['classification_model']['file_id'],
                     model_path
                 )
                 if not success:
                     return None, None
-        
-        # Check if file actually exists and has content
-        if not os.path.exists(model_path) or os.path.getsize(model_path) < 1000:
-            st.error(f"Model file is missing or corrupted: {model_path}")
+
+        if not os.path.exists(model_path):
+            st.error("Model file missing after download")
             return None, None
-        
-        # FIXED: Simplified loading strategy with proper error handling
-        model = None
-        loading_method = None
-        
-        # Method 1: Standard TensorFlow Keras (works with .h5 and compatible .keras files)
-        try:
-            model = tf.keras.models.load_model(model_path, compile=False)
-            loading_method = "TensorFlow Keras"
-            st.success("✅ Model loaded successfully")
-        except Exception as e1:
-            # Method 2: Try with tf.saved_model if it's a SavedModel format
-            try:
-                model = tf.saved_model.load(model_path)
-                # Wrap in a callable interface
-                model = model.signatures['serving_default']
-                loading_method = "TensorFlow SavedModel"
-                st.success("✅ Model loaded as SavedModel")
-            except Exception as e2:
-                st.error("❌ Failed to load model with both methods")
-                st.error(f"Method 1 error: {str(e1)[:200]}")
-                st.error(f"Method 2 error: {str(e2)[:200]}")
-                
-                st.error("### 🔴 SOLUTION REQUIRED")
-                st.markdown("""
-                **Your model format is incompatible. Please re-save your model:**
-                
-                ```python
-                import tensorflow as tf
-                
-                # Load your trained model
-                model = tf.keras.models.load_model('your_model.keras')
-                
-                # Save in H5 format (most compatible)
-                model.save('best_model.h5', save_format='h5')
-                ```
-                
-                Then upload `best_model.h5` to Google Drive and update the file ID.
-                """)
-                return None, None
-        
-        # Compile the model if it's a Keras model
-        if hasattr(model, 'compile'):
-            model.compile(
-                optimizer=tf.keras.optimizers.Adam(learning_rate=0.00004),
-                loss='binary_crossentropy',
-                metrics=['accuracy']
-            )
-        
-        return model, f"InceptionV3 ({loading_method})"
-            
+
+        # PURE KERAS LOAD — NO FALLBACKS
+        model = tf.keras.models.load_model(model_path)
+
+        return model, "InceptionV3 (Keras 3)"
+    
     except Exception as e:
-        st.error(f"❌ Unexpected error: {str(e)}")
+        st.error(f"❌ Failed to load model: {str(e)}")
         return None, None
         
 @st.cache_resource(show_spinner=False)
@@ -766,6 +720,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
