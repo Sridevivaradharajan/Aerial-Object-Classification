@@ -346,43 +346,80 @@ def load_classification_model():
             st.error(f"Model file is missing or corrupted: {model_path}")
             return None, None
         
-        # Load the model - Keras 3.x safe mode fix
-        try:
-            # Option 1: Use TF-Keras backend (most compatible)
-            os.environ['TF_USE_LEGACY_KERAS'] = '1'
-            model = tf.keras.models.load_model(model_path, compile=False)
-            
-        except Exception as e1:
-            try:
-                # Option 2: Keras 3.x with safe_mode disabled
-                import keras
-                model = keras.saving.load_model(model_path, safe_mode=False)
-                
-            except Exception as e2:
-                # Option 3: Load weights only (most robust)
-                st.warning("Using fallback method: loading weights only")
-                
-                # Rebuild model architecture
-                from tensorflow.keras.applications import InceptionV3
-                from tensorflow.keras.models import Model
-                from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Dropout, BatchNormalization
-                
-                base_model = InceptionV3(weights=None, include_top=False, input_shape=(224, 224, 3))
-                x = base_model.output
-                x = GlobalAveragePooling2D()(x)
-                x = Dense(256, activation='relu')(x)
-                x = BatchNormalization()(x)
-                x = Dropout(0.5)(x)
-                x = Dense(128, activation='relu')(x)
-                x = BatchNormalization()(x)
-                x = Dropout(0.3)(x)
-                predictions = Dense(1, activation='sigmoid')(x)
-                model = Model(inputs=base_model.input, outputs=predictions)
-                
-                # Load weights
-                model.load_weights(model_path)
+        # STRATEGY: Try multiple loading methods in order of reliability
         
-        # Compile the model
+        # Method 1: Legacy TF-Keras (Most Compatible)
+        try:
+            os.environ['TF_USE_LEGACY_KERAS'] = '1'
+            with st.spinner("Loading with TF-Keras backend..."):
+                model = tf.keras.models.load_model(model_path, compile=False)
+                st.success("✅ Model loaded successfully with TF-Keras")
+        except Exception as e1:
+            st.warning(f"Method 1 failed: {str(e1)[:100]}")
+            
+            # Method 2: Pure Keras 3.x with safe_mode disabled
+            try:
+                with st.spinner("Trying Keras 3.x loader..."):
+                    import keras
+                    model = keras.saving.load_model(model_path, safe_mode=False)
+                    st.success("✅ Model loaded successfully with Keras 3.x")
+            except Exception as e2:
+                st.warning(f"Method 2 failed: {str(e2)[:100]}")
+                
+                # Method 3: Custom object handling
+                try:
+                    with st.spinner("Trying with custom object scope..."):
+                        # Define custom objects if needed
+                        custom_objects = {}
+                        model = tf.keras.models.load_model(
+                            model_path, 
+                            custom_objects=custom_objects,
+                            compile=False
+                        )
+                        st.success("✅ Model loaded with custom objects")
+                except Exception as e3:
+                    st.warning(f"Method 3 failed: {str(e3)[:100]}")
+                    
+                    # Method 4: H5 format attempt
+                    try:
+                        if model_path.endswith('.keras'):
+                            h5_path = model_path.replace('.keras', '.h5')
+                            st.info(f"Trying H5 format conversion...")
+                            # This won't work for .keras files, just trying
+                        
+                        import h5py
+                        with st.spinner("Attempting H5 loader..."):
+                            model = tf.keras.models.load_model(model_path, compile=False)
+                            st.success("✅ Model loaded with H5 format")
+                    except Exception as e4:
+                        # ALL METHODS FAILED
+                        st.error("❌ All loading methods failed!")
+                        st.error(f"Last error: {str(e4)}")
+                        
+                        st.error("### 🔴 CRITICAL: Model Cannot Be Loaded")
+                        st.markdown("""
+                        **The model file is incompatible with this TensorFlow version.**
+                        
+                        **SOLUTION:** You need to re-export your model. Use this code:
+                        
+                        ```python
+                        import tensorflow as tf
+                        
+                        # Load your original model
+                        model = tf.keras.models.load_model('path/to/your/model.keras')
+                        
+                        # Save in H5 format (most compatible)
+                        model.save('Inception_model.h5')
+                        
+                        # OR save with explicit Keras format
+                        model.save('Inception_model_v2.keras', save_format='keras_v3')
+                        ```
+                        
+                        Then upload the new `.h5` file to Google Drive and update the file ID.
+                        """)
+                        return None, None
+        
+        # Compile the successfully loaded model
         model.compile(
             optimizer=tf.keras.optimizers.Adam(learning_rate=0.00004),
             loss='binary_crossentropy',
@@ -392,15 +429,9 @@ def load_classification_model():
         return model, "InceptionV3 Transfer Learning"
             
     except Exception as e:
-        st.error(f"❌ Error loading classification model: {str(e)}")
-        st.info("💡 **Troubleshooting Tips:**")
-        st.markdown("""
-        1. **Check your model format** - Should be `.keras` or `.h5`
-        2. **Verify Google Drive file ID** - Make sure it's correct and publicly accessible
-        3. **Try re-saving the model** with: `model.save('model.keras', save_format='keras')`
-        4. **Check TensorFlow version** - This app works with TF 2.15.0
-        """)
+        st.error(f"❌ Unexpected error: {str(e)}")
         return None, None
+        
 @st.cache_resource(show_spinner=False)
 def load_detection_model():
     """Load YOLOv8 detection model from Google Drive"""
@@ -767,6 +798,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
