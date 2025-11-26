@@ -27,11 +27,11 @@ from pathlib import Path
 # Google Drive file IDs - REPLACE THESE WITH YOUR ACTUAL FILE IDs
 GDRIVE_CONFIG = {
     'classification_model': {
-        'file_id': '1fIBhOpDFhugYKr38cxdGD3U9fXz-aJWS',
+        'file_id': '1mXrOu8_jTE110YOqAoInf4wVrExszHBE',
         'output': 'Models/Inception_model.keras'
     },
     'detection_model': {
-        'file_id': '1fIBhOpDFhugYKr38cxdGD3U9fXz-aJWS',
+        'file_id': '1K-pJncda11qY1JKi9TuOsPtqTiVBoM2Z',
         'output': 'Models/YOLOv8s.pt'
     }
 }
@@ -715,3 +715,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
