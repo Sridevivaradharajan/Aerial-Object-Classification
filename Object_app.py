@@ -346,31 +346,61 @@ def load_classification_model():
             st.error(f"Model file is missing or corrupted: {model_path}")
             return None, None
         
-        # Load the model with custom objects and safe mode disabled
+        # Load the model - Keras 3.x safe mode fix
         try:
-            # Try loading with compile=False first (safer)
+            # Option 1: Use TF-Keras backend (most compatible)
+            os.environ['TF_USE_LEGACY_KERAS'] = '1'
             model = tf.keras.models.load_model(model_path, compile=False)
             
-            # Recompile the model manually
-            model.compile(
-                optimizer=tf.keras.optimizers.Adam(learning_rate=0.00004),
-                loss='binary_crossentropy',
-                metrics=['accuracy']
-            )
-            
-            return model, "InceptionV3 Transfer Learning"
-            
-        except Exception as load_error:
-            # If that fails, try with safe_mode=False (Keras 3.x)
-            import keras
-            model = keras.saving.load_model(model_path, safe_mode=False)
-            return model, "InceptionV3 Transfer Learning"
+        except Exception as e1:
+            try:
+                # Option 2: Keras 3.x with safe_mode disabled
+                import keras
+                model = keras.saving.load_model(model_path, safe_mode=False)
+                
+            except Exception as e2:
+                # Option 3: Load weights only (most robust)
+                st.warning("Using fallback method: loading weights only")
+                
+                # Rebuild model architecture
+                from tensorflow.keras.applications import InceptionV3
+                from tensorflow.keras.models import Model
+                from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Dropout, BatchNormalization
+                
+                base_model = InceptionV3(weights=None, include_top=False, input_shape=(224, 224, 3))
+                x = base_model.output
+                x = GlobalAveragePooling2D()(x)
+                x = Dense(256, activation='relu')(x)
+                x = BatchNormalization()(x)
+                x = Dropout(0.5)(x)
+                x = Dense(128, activation='relu')(x)
+                x = BatchNormalization()(x)
+                x = Dropout(0.3)(x)
+                predictions = Dense(1, activation='sigmoid')(x)
+                model = Model(inputs=base_model.input, outputs=predictions)
+                
+                # Load weights
+                model.load_weights(model_path)
+        
+        # Compile the model
+        model.compile(
+            optimizer=tf.keras.optimizers.Adam(learning_rate=0.00004),
+            loss='binary_crossentropy',
+            metrics=['accuracy']
+        )
+        
+        return model, "InceptionV3 Transfer Learning"
             
     except Exception as e:
-        st.error(f"Error loading classification model: {str(e)}")
-        st.error(f"Full error details: {type(e).__name__}")
+        st.error(f"❌ Error loading classification model: {str(e)}")
+        st.info("💡 **Troubleshooting Tips:**")
+        st.markdown("""
+        1. **Check your model format** - Should be `.keras` or `.h5`
+        2. **Verify Google Drive file ID** - Make sure it's correct and publicly accessible
+        3. **Try re-saving the model** with: `model.save('model.keras', save_format='keras')`
+        4. **Check TensorFlow version** - This app works with TF 2.15.0
+        """)
         return None, None
-
 @st.cache_resource(show_spinner=False)
 def load_detection_model():
     """Load YOLOv8 detection model from Google Drive"""
@@ -737,5 +767,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
