@@ -327,33 +327,26 @@ st.markdown("""
 # ═══════════════════════════════════════════════════════════════
 @st.cache_resource(show_spinner=False)
 def load_classification_model():
-    """Load Keras 3 classification model from Google Drive"""
     try:
         model_path = GDRIVE_CONFIG['classification_model']['output']
-        
-        # Download if not exists
+
+        # Download if needed
         if not os.path.exists(model_path):
             with st.spinner("Downloading classification model..."):
-                success = download_from_gdrive(
+                download_from_gdrive(
                     GDRIVE_CONFIG['classification_model']['file_id'],
                     model_path
                 )
-                if not success:
-                    return None, None
 
-        if not os.path.exists(model_path):
-            st.error("Model file missing after download")
-            return None, None
-
-        # PURE KERAS LOAD — NO FALLBACKS
+        # FINAL FIX: load with TensorFlow ONLY
         model = tf.keras.models.load_model(model_path)
 
-        return model, "InceptionV3 (Keras 3)"
-    
+        return model, "TensorFlow-Keras Model"
+
     except Exception as e:
-        st.error(f"❌ Failed to load model: {str(e)}")
+        st.error(f"Failed to load model: {str(e)}")
         return None, None
-        
+
 @st.cache_resource(show_spinner=False)
 def load_detection_model():
     """Load YOLOv8 detection model from Google Drive"""
@@ -720,6 +713,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
