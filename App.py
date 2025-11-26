@@ -32,7 +32,7 @@ GDRIVE_CONFIG = {
     },
     'detection_model': {
         'file_id': '1K-pJncda11qY1JKi9TuOsPtqTiVBoM2Z',
-        'output': 'Models/YOLOv8s.pt'
+        'output': 'Models/YOLO.pt'
     }
 }
 
@@ -338,8 +338,11 @@ def load_classification_model():
                     model_path
                 )
 
-        # FINAL FIX: load with TensorFlow ONLY
-        model = tf.keras.models.load_model(model_path)
+        # Load with compile=False to avoid issues with custom objects
+        model = tf.keras.models.load_model(model_path, compile=False)
+        
+        # Recompile the model
+        model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
         return model, "TensorFlow-Keras Model"
 
@@ -363,10 +366,7 @@ def load_detection_model():
                 if not success:
                     return None, None
         
-        # Load the model
-        from ultralytics.nn.tasks import DetectionModel
-        torch.serialization.add_safe_globals([DetectionModel])
-        
+        # Load the model without add_safe_globals (not needed for newer PyTorch/YOLO versions)
         model = YOLO(model_path)
         return model, "YOLOv8s"
     except Exception as e:
@@ -713,13 +713,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
