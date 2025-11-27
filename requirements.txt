@@ -1,4 +1,4 @@
-tensorflow==2.15.0
+tensorflow==2.18.0
 streamlit>=1.32.0
 opencv-python-headless
 ultralytics
@@ -6,4 +6,4 @@ torch
 torchvision
 gdown
 pillow
-numpy==1.24.3
+numpy==1.26.4
