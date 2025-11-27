@@ -543,7 +543,10 @@ def main():
         # ═══════════════════════════════════════════════════════════
         
         st.markdown("## Image Classification")
-        st.markdown("<p style='color: white; font-size: 16px;'>Upload an image to classify it as <b style='color: #00FF00;'>Bird</b> or <b style='color: #FF3F7F;'>Drone</b></p>", unsafe_allow_html=True)
+        st.markdown(
+            "<p style='color: white; font-size: 16px;'>Upload an image to classify it as Bird or Drone</p>",
+            unsafe_allow_html=True
+        )
         
         # Load model only when needed
         if 'classification_model' not in st.session_state:
@@ -729,5 +732,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
