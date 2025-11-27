@@ -558,8 +558,6 @@ def main():
             st.info("Make sure you've set the correct Google Drive file IDs in the GDRIVE_CONFIG dictionary.")
             return
         
-        st.success(f"Model loaded: **{st.session_state.classification_model_name}**")
-        
         # File uploader
         uploaded_file = st.file_uploader(
             "Choose an image...",
@@ -659,8 +657,6 @@ def main():
             st.info("Make sure you've set the correct Google Drive file IDs in the GDRIVE_CONFIG dictionary.")
             return
         
-        st.success(f"Model loaded: **{st.session_state.detection_model_name}**")
-        
         # File uploader
         uploaded_file = st.file_uploader(
             "Choose an image...",
@@ -733,4 +729,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
