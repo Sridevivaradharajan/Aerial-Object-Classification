@@ -334,17 +334,16 @@ def load_classification_model():
 
         # Download if needed
         if not os.path.exists(model_path):
-            with st.spinner("Downloading classification model..."):
-                download_from_gdrive(
+            with st.spinner("Downloading classification model (1-2 min)..."):
+                success = download_from_gdrive(
                     GDRIVE_CONFIG['classification_model']['file_id'],
                     model_path
                 )
+                if not success:
+                    return None, None
 
-        # Load model with updated approach for TensorFlow 2.16+
-        model = tf.keras.models.load_model(
-            model_path, 
-            compile=False
-        )
+        # Load model - Compatible with TensorFlow 2.16+
+        model = tf.keras.models.load_model(model_path, compile=False)
         
         # Recompile the model
         model.compile(
@@ -357,7 +356,7 @@ def load_classification_model():
 
     except Exception as e:
         st.error(f"Failed to load classification model: {str(e)}")
-        st.info("Please ensure your model is saved with: `model.save('model.h5')` or `model.save('model.keras')`")
+        st.info("Please ensure your model is saved with: `model.save('model.h5', save_format='h5')`")
         return None, None
 
 @st.cache_resource(show_spinner=False)
@@ -368,7 +367,7 @@ def load_detection_model():
         
         # Download if not exists
         if not os.path.exists(model_path):
-            with st.spinner("Downloading detection model from Google Drive..."):
+            with st.spinner("Downloading detection model (1-2 min)..."):
                 success = download_from_gdrive(
                     GDRIVE_CONFIG['detection_model']['file_id'],
                     model_path
@@ -451,7 +450,7 @@ def predict_detection(model, image, conf_threshold=0.25):
 def main():
     # Header
     st.markdown("""
-    <h1>🦅 AERIAL OBJECT AI SYSTEM</h1>
+    <h1>AERIAL OBJECT AI SYSTEM</h1>
     """, unsafe_allow_html=True)
     
     st.markdown("""
@@ -465,7 +464,7 @@ def main():
     
     # Sidebar
     with st.sidebar:
-        st.markdown("### 🎛️ CONTROL PANEL")
+        st.markdown("### CONTROL PANEL")
         st.markdown("---")
         
         # Task selection
@@ -478,7 +477,7 @@ def main():
         st.markdown("---")
         
         # Model info
-        st.markdown("### 📊 MODEL INFO")
+        st.markdown("### MODEL INFO")
         if "Classification" in task:
             st.info("**Task:** Binary Classification\n\n**Classes:** Bird, Drone\n\n**Architecture:** Transfer Learning")
         else:
@@ -502,7 +501,7 @@ def main():
         st.markdown("---")
         
         # About
-        with st.expander("ℹ️ About This App"):
+        with st.expander("About This App"):
             st.markdown("""
             **Aerial Object AI** uses state-of-the-art deep learning to:
             
@@ -532,7 +531,7 @@ def main():
         # IMAGE CLASSIFICATION
         # ═══════════════════════════════════════════════════════════
         
-        st.markdown("## 🔍 Image Classification")
+        st.markdown("## Image Classification")
         st.markdown(
             "<p style='color: white; font-size: 16px;'>Upload an image to classify it as Bird or Drone</p>",
             unsafe_allow_html=True
@@ -547,11 +546,11 @@ def main():
                     st.session_state.classification_model_name = model_name
         
         if 'classification_model' not in st.session_state:
-            st.error("❌ Failed to load model. Please check your Google Drive configuration.")
+            st.error("Failed to load model. Please check your Google Drive configuration.")
             st.info("Make sure you've set the correct Google Drive file IDs in the GDRIVE_CONFIG dictionary.")
             return
         
-        st.success(f"✅ Model loaded: **{st.session_state.classification_model_name}**")
+        st.success(f"Model loaded: **{st.session_state.classification_model_name}**")
         
         # File uploader
         uploaded_file = st.file_uploader(
@@ -569,15 +568,15 @@ def main():
             col1, col2 = st.columns([1, 1])
             
             with col1:
-                st.markdown("### 📷 Original Image")
-                st.image(image, width=None)  # Changed from use_container_width
+                st.markdown("### Original Image")
+                st.image(image, use_column_width=True)
                 st.caption(f"Size: {image.size[0]} × {image.size[1]} pixels")
             
             with col2:
-                st.markdown("### 🤖 AI Analysis")
+                st.markdown("### AI Analysis")
                 
                 # Predict button
-                if st.button("🚀 ANALYZE IMAGE", key="classify_btn"):
+                if st.button("ANALYZE IMAGE", key="classify_btn"):
                     with st.spinner("Analyzing..."):
                         start_time = time.time()
                         class_name, confidence = predict_classification(
@@ -609,16 +608,16 @@ def main():
                     
                     # Additional info
                     if confidence >= 90:
-                        st.success("✅ Very High Confidence - Excellent prediction")
+                        st.success("Very High Confidence - Excellent prediction")
                     elif confidence >= 75:
                         st.info("✓ High Confidence - Good prediction")
                     elif confidence >= 60:
-                        st.warning("⚠️ Moderate Confidence - Review recommended")
+                        st.warning("Moderate Confidence - Review recommended")
                     else:
-                        st.error("⚠️ Low Confidence - Uncertain prediction")
+                        st.error("Low Confidence - Uncertain prediction")
                     
                     # Detailed stats
-                    with st.expander("📊 Detailed Statistics"):
+                    with st.expander("Detailed Statistics"):
                         other_class = "Bird" if class_name == "Drone" else "Drone"
                         other_conf = 100 - confidence
                         
@@ -636,7 +635,7 @@ def main():
         # OBJECT DETECTION
         # ═══════════════════════════════════════════════════════════
         
-        st.markdown("## 🎯 Object Detection")
+        st.markdown("## Object Detection")
         st.markdown("<p style='color: white; font-size: 16px;'>Upload an image to detect and localize <b style='color: #00FF00;'>Birds</b> and <b style='color: #FF3F7F;'>Drones</b></p>", unsafe_allow_html=True)
         
         # Load model only when needed
@@ -648,11 +647,11 @@ def main():
                     st.session_state.detection_model_name = model_name
         
         if 'detection_model' not in st.session_state:
-            st.error("❌ Failed to load model. Please check your Google Drive configuration.")
+            st.error("Failed to load model. Please check your Google Drive configuration.")
             st.info("Make sure you've set the correct Google Drive file IDs in the GDRIVE_CONFIG dictionary.")
             return
         
-        st.success(f"✅ Model loaded: **{st.session_state.detection_model_name}**")
+        st.success(f"Model loaded: **{st.session_state.detection_model_name}**")
         
         # File uploader
         uploaded_file = st.file_uploader(
@@ -670,15 +669,15 @@ def main():
             col1, col2 = st.columns([1, 1])
             
             with col1:
-                st.markdown("### 📷 Original Image")
-                st.image(image, width=None)  # Changed from use_container_width
+                st.markdown("### Original Image")
+                st.image(image, use_column_width=True)
                 st.caption(f"Size: {image.size[0]} × {image.size[1]} pixels")
             
             with col2:
-                st.markdown("### 🎯 Detection Results")
+                st.markdown("### Detection Results")
                 
                 # Detect button
-                if st.button("🔍 DETECT OBJECTS", key="detect_btn"):
+                if st.button("DETECT OBJECTS", key="detect_btn"):
                     with st.spinner("Detecting objects..."):
                         start_time = time.time()
                         img_with_boxes, detections = predict_detection(
@@ -687,7 +686,7 @@ def main():
                         inference_time = (time.time() - start_time) * 1000
                     
                     # Show detected image
-                    st.image(img_with_boxes, width=None)  # Changed from use_container_width
+                    st.image(img_with_boxes, use_column_width=True)
                     
                     # Detection statistics
                     num_birds = sum(1 for d in detections if d['class'] == 'bird')
@@ -695,23 +694,23 @@ def main():
                     total_detections = len(detections)
                     
                     # Metrics
-                    st.markdown("### 📊 Detection Summary")
+                    st.markdown("### Detection Summary")
                     metric_col1, metric_col2, metric_col3 = st.columns(3)
                     
                     with metric_col1:
-                        st.metric("🐦 Birds", num_birds)
+                        st.metric("Birds", num_birds)
                     with metric_col2:
-                        st.metric("🚁 Drones", num_drones)
+                        st.metric("Drones", num_drones)
                     with metric_col3:
-                        st.metric("⚡ Time", f"{inference_time:.0f} ms")
+                        st.metric("Time", f"{inference_time:.0f} ms")
                     
                     if total_detections == 0:
-                        st.warning("⚠️ No objects detected. Try lowering the confidence threshold.")
+                        st.warning("No objects detected. Try lowering the confidence threshold.")
                     else:
-                        st.success(f"✅ Detected **{total_detections}** object(s)")
+                        st.success(f"Detected **{total_detections}** object(s)")
                         
                         # Detailed detections
-                        with st.expander("📋 Detection Details"):
+                        with st.expander("Detection Details"):
                             for idx, det in enumerate(detections, 1):
                                 color = "#00FF00" if det['class'] == 'bird' else "#FF0000"
                                 
@@ -726,5 +725,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
