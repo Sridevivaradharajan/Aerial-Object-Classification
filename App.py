@@ -340,14 +340,11 @@ def load_classification_model():
                     model_path
                 )
 
-        # Custom object scope to handle InputLayer batch_shape issue
-        with tf.keras.utils.custom_object_scope({}):
-            # Load model without compiling first
-            model = tf.keras.models.load_model(
-                model_path, 
-                compile=False,
-                safe_mode=False  # Disable safe mode to handle older models
-            )
+        # Load model with updated approach for TensorFlow 2.16+
+        model = tf.keras.models.load_model(
+            model_path, 
+            compile=False
+        )
         
         # Recompile the model
         model.compile(
@@ -360,7 +357,7 @@ def load_classification_model():
 
     except Exception as e:
         st.error(f"Failed to load classification model: {str(e)}")
-        st.info("Try re-exporting your model with TensorFlow 2.15.0 to ensure compatibility.")
+        st.info("Please ensure your model is saved with: `model.save('model.h5')` or `model.save('model.keras')`")
         return None, None
 
 @st.cache_resource(show_spinner=False)
@@ -729,4 +726,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
