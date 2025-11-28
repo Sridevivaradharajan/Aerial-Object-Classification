@@ -82,8 +82,8 @@ Aerial-Object-AI/
 ### **1. Clone the Repository**
 
 ```bash
-git clone https://github.com/yourusername/aerial-object-ai.git
-cd aerial-object-ai
+git clone https://github.com/Sridevivaradharajan/Aerial-Object-Classification/.git
+cd Aerial-Object-Classification
 ```
 
 ### **2. Install Dependencies**
@@ -95,7 +95,7 @@ pip install -r requirements.txt
 ### **3. Run Streamlit App**
 
 ```bash
-streamlit run streamlit_app.py
+streamlit run App.py
 ```
 
 ### **4. For YOLO Training**
@@ -131,5 +131,3 @@ yolo train model=yolov8n.pt data=data.yaml epochs=50 imgsz=640
 
 This project provides a powerful, real-time framework that integrates both **classification** and **detection** for aerial imagery. By combining multiple deep learning models and offering a simple, deployable interface, it enhances situational awareness and improves decision-making across various critical domains.
 
-
-Just ask!
